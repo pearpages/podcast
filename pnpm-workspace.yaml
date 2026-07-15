@@ -1,3 +1,6 @@
 allowBuilds:
+  # Declined: the SDK synthesizes fine without their postinstall scripts.
+  '@google/genai': false
+  protobufjs: false
   esbuild: true
   msedge-tts: true

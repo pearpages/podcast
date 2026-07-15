@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build:audio": "tsx scripts/generate.ts"
+    "build:audio": "tsx --env-file-if-exists=.env scripts/generate.ts",
+    "build:audio:gemini": "tsx --env-file-if-exists=.env scripts/generate.ts --provider=gemini",
+    "build:audio:edge": "tsx scripts/generate.ts --provider=edge"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +20,7 @@
   },
   "type": "module",
   "dependencies": {
+    "@google/genai": "^2.11.0",
     "msedge-tts": "^2.0.7"
   },
   "devDependencies": {

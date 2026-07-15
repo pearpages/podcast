@@ -8,6 +8,35 @@ export interface Chunk {
 }
 
 /**
+ * Packs consecutive turns into groups for engines that synthesize a whole
+ * exchange in one request (see lib/providers/gemini.ts).
+ *
+ * A turn is never split across groups: the engine needs each speaker's line
+ * whole to get the turn-taking right. Groups exist only because these engines
+ * degrade over long inputs, so the seam between groups is a real cost -- fewer,
+ * fuller groups are better than many small ones.
+ */
+export function groupTurns(turns: Turn[], maxChars: number): Turn[][] {
+  const groups: Turn[][] = [];
+  let current: Turn[] = [];
+  let size = 0;
+
+  for (const turn of turns) {
+    const cost = turn.speaker.length + turn.text.length + 3; // "SPEAKER: text\n"
+    if (current.length > 0 && size + cost > maxChars) {
+      groups.push(current);
+      current = [];
+      size = 0;
+    }
+    current.push(turn);
+    size += cost;
+  }
+
+  if (current.length > 0) groups.push(current);
+  return groups;
+}
+
+/**
  * Chunks every turn independently so that a chunk never spans two speakers
  * (each chunk is synthesized in exactly one voice).
  *

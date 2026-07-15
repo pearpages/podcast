@@ -1,34 +1,51 @@
 import { readFile, mkdir, rm } from "node:fs/promises";
 import path from "node:path";
-import { config } from "../lib/config";
+import { config, speakersFor, type ProviderName } from "../lib/config";
 import { parseTurns, findUnknownLabels } from "../lib/parse";
-import { chunkTurns, type Chunk } from "../lib/chunk";
-import { synthesizeAll } from "../lib/synthesize";
-import { stitchAudio, makeSilence } from "../lib/stitch";
+import { stitchAudio } from "../lib/stitch";
+import { createEdgeProvider } from "../lib/providers/edge";
+import { createGeminiProvider } from "../lib/providers/gemini";
+import type { TtsProvider } from "../lib/providers/types";
 
-/**
- * Interleaves a silence file between chunks whenever the turn changes, so the
- * pause lands between speakers rather than inside one speaker's chunked turn.
- */
-function withGaps(chunks: Chunk[], files: string[], silence: string): string[] {
-  return files.flatMap((file, i) => {
-    const next = chunks[i + 1];
-    const isTurnEnd = next !== undefined && next.turnIndex !== chunks[i]!.turnIndex;
-    return isTurnEnd ? [file, silence] : [file];
-  });
+const PROVIDERS: Record<ProviderName, () => TtsProvider> = {
+  gemini: () => createGeminiProvider(config.gemini),
+  edge: () => createEdgeProvider(config.edge),
+};
+
+function parseArgs(argv: string[]): { inputPath?: string; provider: ProviderName } {
+  let provider = config.provider;
+  let inputPath: string | undefined;
+
+  for (const arg of argv) {
+    const flag = /^--provider(?:=(.*))?$/.exec(arg);
+    if (flag) {
+      const value = flag[1];
+      if (!value || !(value in PROVIDERS)) {
+        throw new Error(
+          `--provider must be one of: ${Object.keys(PROVIDERS).join(", ")}` +
+            (value ? ` (got "${value}")` : ""),
+        );
+      }
+      provider = value as ProviderName;
+      continue;
+    }
+    inputPath ??= arg;
+  }
+
+  return { inputPath, provider };
 }
 
 async function main(): Promise<void> {
-  const inputPath = process.argv[2];
+  const { inputPath, provider: providerName } = parseArgs(process.argv.slice(2));
   if (!inputPath) {
-    console.error("Usage: pnpm build:audio <path-to-script.txt>");
+    console.error("Usage: pnpm build:audio <path-to-script.txt> [--provider=gemini|edge]");
     process.exit(1);
   }
 
   console.log(`Reading ${inputPath}`);
   const script = await readFile(inputPath, "utf8");
 
-  const speakers = Object.keys(config.voices);
+  const speakers = speakersFor(providerName);
   const turns = parseTurns(script, speakers);
   if (turns.length === 0) throw new Error(`${inputPath} has no speakable text.`);
 
@@ -41,35 +58,24 @@ async function main(): Promise<void> {
     console.warn(`  ! "${label}:" (x${count}) is not a configured speaker - reading it as dialogue`);
   }
 
-  const chunks = chunkTurns(turns, config.maxCharsPerChunk);
-  console.log(`Split into ${chunks.length} chunk(s)`);
+  // Construct before any cleanup: a missing API key should fail before we
+  // delete the previous render.
+  const provider = PROVIDERS[providerName]();
+  console.log(`Synthesizing with ${provider.name}...`);
 
   await rm(config.paths.chunksDir, { recursive: true, force: true });
   await mkdir(path.dirname(config.paths.outputFile), { recursive: true });
 
-  console.log("Synthesizing...");
-  const files = await synthesizeAll(chunks, {
-    voices: config.voices,
-    outputFormat: config.outputFormat,
-    prosody: config.prosody,
-    chunksDir: config.paths.chunksDir,
+  const files = await provider.render(turns, {
+    workDir: config.paths.chunksDir,
+    onProgress: (done, total, unit) => {
+      process.stdout.write(`  -> ${unit} ${Math.min(done + 1, total)}/${total}\r`);
+      if (done === total) process.stdout.write("\n");
+    },
   });
 
   console.log("Stitching...");
-  const needsGaps = turns.length > 1 && config.turnGapMs > 0;
-  const ordered = needsGaps
-    ? withGaps(
-        chunks,
-        files,
-        await makeSilence(
-          config.turnGapMs,
-          files[0]!,
-          path.join(config.paths.chunksDir, "gap.mp3"),
-        ),
-      )
-    : files;
-
-  await stitchAudio(ordered, config.paths.outputFile);
+  await stitchAudio(files, config.paths.outputFile);
 
   await rm(config.paths.chunksDir, { recursive: true, force: true });
   console.log(`\nDone: ${config.paths.outputFile}`);

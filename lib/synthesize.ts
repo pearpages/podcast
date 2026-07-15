@@ -10,6 +10,7 @@ export interface SynthesizeOptions {
   outputFormat: OUTPUT_FORMAT;
   prosody?: ProsodyOptions;
   chunksDir: string;
+  onProgress?: (done: number, total: number, unit: string) => void;
 }
 
 /**
@@ -56,9 +57,9 @@ export async function synthesizeAll(
 ): Promise<string[]> {
   const files: string[] = [];
   for (const [index, chunk] of chunks.entries()) {
-    process.stdout.write(`  -> chunk ${index + 1}/${chunks.length}\r`);
+    options.onProgress?.(index, chunks.length, "chunk");
     files.push(await synthesizeChunk(chunk, index, options));
   }
-  process.stdout.write("\n");
+  options.onProgress?.(chunks.length, chunks.length, "chunk");
   return files;
 }

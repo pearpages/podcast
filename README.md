@@ -2,10 +2,40 @@
 
 Turns a plain-text script into a single narrated MP3, with one voice or several.
 
-The script is split into speaker turns, each turn is split into TTS-friendly chunks (on
-paragraph boundaries, falling back to sentences for long paragraphs), each chunk is
-synthesized separately through Microsoft Edge's free text-to-speech voices, and the
-resulting audio is stitched back together with `ffmpeg` into one file.
+The script is split into speaker turns, those turns are sent to a speech engine, and the
+resulting audio is stitched together with `ffmpeg` into one file.
+
+## Engines
+
+Two engines are supported. They differ in more than voice quality — they differ in *how*
+they produce a conversation, which is the thing that makes multi-host audio sound real or
+fake.
+
+| | `gemini` (default) | `edge` |
+| --- | --- | --- |
+| Turn-taking | Generates the whole exchange at once, so hosts respond to each other | One clip per turn, glued together with inserted silence |
+| API key | **Required** (`GEMINI_API_KEY`) | None |
+| Cost | Free tier: **10 requests/day** | Free, unlimited |
+| Speakers | **Max 2** | Unlimited |
+| Status | Preview model — may change | Stable |
+
+```bash
+pnpm build:audio input/two-hosts-script.txt          # gemini (default)
+pnpm build:audio:gemini input/two-hosts-script.txt   # explicit
+pnpm build:audio:edge input/two-hosts-script.txt     # no API key needed
+```
+
+**Gemini setup**: get a free key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+and put it in `.env` (gitignored — see `.env.example`):
+
+```
+GEMINI_API_KEY=your-key-here
+```
+
+⚠️ **The free tier allows only 10 TTS requests per day.** Each render costs one request
+(`gemini.maxCharsPerGroup` is set high enough to fit a whole episode in a single call), so
+that's ~10 renders/day. Google's free tier also generally uses submitted data to improve
+their products. `edge` needs no key and has no quota, which is why it stays as a fallback.
 
 ## Script formats
 
@@ -56,28 +86,46 @@ refuses to run it.
 
 ## Configuration
 
-Everything tunable lives in `lib/config.ts`:
+Everything tunable lives in `lib/config.ts`. `provider` picks the default engine; the rest
+is grouped per engine, because the two share almost nothing — Gemini wants `"Leda"` where
+Edge wants `"en-US-EmmaNeural"`.
 
-| Setting | What it controls |
+| `gemini` | What it controls |
 | --- | --- |
-| `voices` | Speaker label → Edge voice ShortName, e.g. `en-US-AvaNeural`, `en-GB-RyanNeural` |
-| `turnGapMs` | Silence inserted between speaker turns (default 600ms) |
-| `outputFormat` | Codec, sample rate, and bitrate — defaults to 24kHz mono 96kbit MP3 |
-| `prosody` | Speaking rate and pitch. Accepts relative values (`"-5%"`, `"+2st"`) as well as presets like `"slow"` |
-| `maxCharsPerChunk` | Chunk size ceiling; keeps individual TTS requests reliable |
-| `paths` | Where chunks and the final file are written |
+| `voices` | Speaker label → Gemini prebuilt voice (`Leda`, `Charon`, `Kore`, …) |
+| `style` | Natural-language direction prepended to every request — **the only way to steer delivery**, including accent |
+| `model` | Defaults to `gemini-2.5-flash-preview-tts` |
+| `maxCharsPerGroup` | Characters per API request. **One request per render** at the default; lower it if long output drifts, at the cost of quota |
+| `bitrateKbps` | The API returns raw PCM; this is the mp3 bitrate it's encoded to |
 
-The `voices` map is the only place speakers are defined — it doubles as the set of labels
-the parser recognizes, so **adding a third speaker needs no code change**:
+| `edge` | What it controls |
+| --- | --- |
+| `voices` | Speaker label → Edge voice ShortName (`en-US-EmmaNeural`, `en-GB-RyanNeural`, …) |
+| `prosody` | Rate and pitch. Accepts relative values (`"-5%"`, `"+2st"`) and presets like `"slow"` |
+| `turnGapMs` | Silence inserted between turns (default 600ms). Gemini needs no equivalent |
+| `outputFormat` | Codec, sample rate, bitrate — defaults to 24kHz mono 96kbit MP3 |
+| `maxCharsPerChunk` | Chunk size ceiling; keeps individual requests reliable |
+
+A `voices` map doubles as the set of labels the parser recognizes, so on `edge`, **adding a
+third speaker needs no code change**:
 
 ```ts
-voices: {
-  NARRATOR: "en-US-EmmaNeural",
-  "HOST A": "en-US-EmmaNeural",
-  "HOST B": "en-GB-RyanNeural",
-  "GUEST": "en-AU-WilliamNeural",   // now GUEST: works in scripts
+edge: {
+  voices: {
+    NARRATOR: "en-US-EmmaNeural",
+    "HOST A": "en-US-EmmaNeural",
+    "HOST B": "en-GB-RyanNeural",
+    "GUEST": "en-AU-WilliamNeural",   // now GUEST: works in scripts
+  },
 }
 ```
+
+**Gemini caps at 2 speakers** and errors out if a script has more, pointing you at `edge`.
+
+Gemini also documents **no gender or accent** for its voices — only a timbre word each
+(`Kore`–Firm, `Puck`–Upbeat, `Leda`–Youthful). Accent is steered through `style` instead,
+which is why the config reads "HOST B is a warm, confident British man" rather than naming
+a British voice.
 
 A label in the script that isn't in the map is reported as a warning and read as ordinary
 dialogue, so a typo like `HOST C:` is visible rather than silently absorbed.
