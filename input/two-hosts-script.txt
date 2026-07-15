@@ -1,0 +1,99 @@
+HOST A: So here's a question I think every engineering manager secretly dreads. How do you actually know if your team is doing well? And the scarier one — how do you know if one specific person is doing well?
+
+HOST B: Right, and software makes that brutally hard. The work is invisible, the quality only shows up months later, and the most valuable thing someone did all week might've been quietly preventing a disaster that now leaves no trace anywhere.
+
+HOST A: So today we're talking about how to measure software work without fooling yourself, and without wrecking the very thing you're trying to improve. Where do we start?
+
+HOST B: We start with the one idea that, honestly, if you remember nothing else, remember this. It's called Goodhart's Law. When a measure becomes a target, it stops being a good measure.
+
+HOST A: Okay, say that again slower, because it sounds almost like a riddle.
+
+HOST B: It does. Here's it in practice. Imagine you decide to measure how many pull requests each developer merges. A pull request is just a bundle of code changes submitted for review before it joins the main project. Think of it like handing in a chunk of homework.
+
+HOST A: Sure. So you start counting those bundles.
+
+HOST B: And the moment people know you're counting, they start making the bundles smaller and more frequent, just to push the number up. The count climbs. The actual work doesn't. You measured the wrong thing, and you got exactly what you asked for.
+
+HOST A: And I bet that's not just pull requests.
+
+HOST B: It's everything. Count lines of code, people write more verbose code. Count story points — those rough effort estimates teams use — and the estimates quietly inflate. Count bugs, and suddenly bugs get relabeled as "improvements."
+
+HOST A: So then are metrics just useless? Should we throw them out?
+
+HOST B: No, and here's the reframe that makes it all click. Metrics are thermometers, not steering wheels.
+
+HOST A: Oh, I like that.
+
+HOST B: A thermometer tells you the room is cold. It tells you where to look and what to ask about. But you'd never try to steer a car with one. A metric should point you toward a good question. It should never directly decide someone's bonus, or their ranking, or their punishment. The instant a number controls someone's paycheck, it stops describing reality and starts describing what people think you want to see.
+
+HOST A: Okay, so if metrics are for asking questions and not handing down verdicts — what's actually worth measuring?
+
+HOST B: The big insight is about where you point the lens. The best team-level metrics measure the system, not the individuals inside it. And the gold standard there is a set of four metrics called DORA.
+
+HOST A: DORA. What does that stand for?
+
+HOST B: DevOps Research and Assessment. It came out of years of research into what actually makes software teams effective. And what's clever is that it's really two pairs. Two of the metrics measure speed, and two measure stability.
+
+HOST A: Break that down for me. What's on the speed side?
+
+HOST B: How often you ship new code to your users, and how long it takes a change to go from a developer's laptop to actually running live. And on the stability side, how often your releases break something, and how fast you recover when they do.
+
+HOST A: So why does splitting it into two pairs matter so much?
+
+HOST B: Because the pairs keep each other honest. Picture a team that wants to look fast, so they start shipping recklessly, over and over. Their speed numbers shoot up.
+
+HOST A: But the reckless shipping breaks things.
+
+HOST B: Exactly, so their failure rate climbs right alongside it, and the mask slips. You simply can't look good on all four at once without genuinely being good. Speed alone is easy to fake. Speed plus stability is not.
+
+HOST A: That's the whole trick, then. So let's get concrete. Everybody complains about technical debt but nobody can pin it down. How do you measure that?
+
+HOST B: Well, first, what a lovely metaphor it is. When you take a shortcut in your code to ship faster today, it's like borrowing money. It works right now, but you pay interest later — every future change gets a little slower and a little more painful.
+
+HOST A: And I'm guessing you can't just put one number on it.
+
+HOST B: You can't, and that's the key. So instead of chasing one perfect number, you triangulate. You look at several imperfect signals from different angles and see where they agree.
+
+HOST A: Give me the most useful ones.
+
+HOST B: Two of them. The first is finding your hotspots. You cross-reference two things — which files change the most often, and which files are the most complicated. A file that's a tangled mess but nobody ever touches?
+
+HOST A: Leave it alone, I assume.
+
+HOST B: Harmless, yeah. But a file that's both a tangled mess and gets changed every single week — that's where your bugs breed and your developers suffer. That's the debt worth paying down first.
+
+HOST A: And the second signal?
+
+HOST B: This is the one that convinces the people holding the budget. It's the interest you're already paying. Look at how much of your team's time goes to unplanned work — the emergency bug fixes, the "why is this taking three days" surprises. If forty percent of every two-week sprint gets eaten by firefighting, that's not vague grumbling anymore. That's your interest rate, in plain numbers.
+
+HOST A: Okay. Now the scary part. Measuring individual people. What does the research say?
+
+HOST B: The research and the scar tissue agree, and it's blunt. Ranking individuals against each other by their metrics reliably destroys teams.
+
+HOST A: Why so destructive?
+
+HOST B: Because it rewards loud, visible, solo output, and it quietly punishes the things that actually make a team great. Reviewing a teammate's code carefully. Mentoring a junior. Writing the docs. Taking on the ugly cleanup nobody wants. None of that shows up as a personal high score, so a ranking system treats it as invisible — and your best people learn to stop doing it.
+
+HOST A: So what do you do instead?
+
+HOST B: Two things really matter. First, measure impact, not output. The question is never "how many code bundles did this person ship?" It's "what actually changed because this person was here?" Did the checkout page start failing less often? Did reviews across the whole team get faster after they fixed a broken process?
+
+HOST A: So it's a story, not a number.
+
+HOST B: A story you build together with the person, not something you scrape off a dashboard. And the second thing — watch for the multipliers, and watch for the glue.
+
+HOST A: The glue?
+
+HOST B: Your strongest engineers often show up in other people's numbers. The code they reviewed ships with fewer defects. The juniors they mentored ramp up faster. And someone on your team is quietly keeping the whole machine running — updating dependencies, answering questions, keeping the automated tests green. That work is essential and completely invisible to any tool. If you don't go looking for it on purpose, you'll undervalue those people, and one day they'll just leave.
+
+HOST A: Okay, bring it home for me. What's the one shape of all this?
+
+HOST B: Metrics are thermometers, not steering wheels. They start conversations, they don't hand down verdicts. Measure your system relentlessly, because it's fair game and hard to fake. Measure your team carefully, using balanced pairs like speed against stability. And measure individuals almost not at all — look at their real impact and how they lift the people around them, and beyond that, just talk to them.
+
+HOST A: Because the goal was never really precision, was it?
+
+HOST B: No. It's earlier, better conversations. A good setup doesn't tell you who to promote or fire. It tells you where friction is building up, and which questions to ask before a small problem becomes a crisis.
+
+HOST A: So if someone listening does just one thing this week?
+
+HOST B: Take a number your team already tracks, and instead of judging someone with it, turn it into a curious question. That one shift changes everything.
